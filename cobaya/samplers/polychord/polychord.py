@@ -145,8 +145,6 @@ class polychord(Sampler):
                    "file_root", "seed", "grade_dims", "grade_frac", "nlives"]
         # As stated above, num_repeats is ignored, so let's not pass it
         pc_args.pop(pc_args.index("num_repeats"))
-        settings: Any = load_module('pypolychord.settings', path=self._poly_build_path,
-                                    min_version=None)
         self.pc_kwargs = {p: getattr(self, p) for p in pc_args if getattr(self, p) is not None}
         self.pc_kwargs["seed"] = self.seed if self.seed is not None else -1
         # Prepare callback function
