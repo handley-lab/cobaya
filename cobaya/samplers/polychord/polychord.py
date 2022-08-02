@@ -145,11 +145,8 @@ class polychord(Sampler):
                    "file_root", "seed", "grade_dims", "grade_frac", "nlives"]
         # As stated above, num_repeats is ignored, so let's not pass it
         pc_args.pop(pc_args.index("num_repeats"))
-        settings: Any = load_module('pypolychord.settings', path=self._poly_build_path,
-                                    min_version=None)
-        self.pc_settings = settings.PolyChordSettings(
-            self.nDims, self.nDerived, seed=(self.seed if self.seed is not None else -1),
-            **{p: getattr(self, p) for p in pc_args if getattr(self, p) is not None})
+        self.pc_kwargs = {p: getattr(self, p) for p in pc_args if getattr(self, p) is not None}
+        self.pc_kwargs["seed"] = self.seed if self.seed is not None else -1
         # Prepare callback function
         if self.callback_function is not None:
             self.callback_function_callable = (
@@ -161,8 +158,8 @@ class polychord(Sampler):
         # Done!
         if is_main_process():
             self.log.debug("Calling PolyChord with arguments:")
-            for p, v in inspect.getmembers(self.pc_settings, lambda a: not (callable(a))):
-                if not p.startswith("_"):
+            for p, v in self.pc_kwargs.items():
+                if callable(v) and not p.startswith("_"):
                     self.log.debug("  %s: %s", p, v)
         self.mpi_info("Initialized!")
 
@@ -217,7 +214,7 @@ class polychord(Sampler):
             if len(derived) != self.n_derived:
                 derived = np.full(self.n_derived, np.nan)
             derived = list(derived) + list(result.logpriors) + list(loglikes)
-            return max(loglikes.sum(), self.pc_settings.logzero), derived
+            return max(loglikes.sum(), self.pc_kwargs["logzero"]), derived
 
         def prior(cube):
             theta = np.empty_like(cube)
@@ -229,14 +226,14 @@ class polychord(Sampler):
             self.dump_paramnames(self.raw_prefix)
         sync_processes()
         self.mpi_info("Calling PolyChord...")
-        self.pc.run_polychord(loglikelihood, self.nDims, self.nDerived, self.pc_settings,
-                              prior, self.dumper)
+        self.pc.run(loglikelihood, self.nDims, nDerived=self.nDerived,
+                              prior=prior, dumper=self.dumper, **self.pc_kwargs)
         self.process_raw_output()
 
     @property
     def raw_prefix(self):
         return os.path.join(
-            self.pc_settings.base_dir, self.pc_settings.file_root)
+            self.pc_kwargs["base_dir"], self.pc_kwargs["file_root"])
 
     def dump_paramnames(self, prefix):
         labels = self.model.parameterization.labels()
@@ -301,13 +298,13 @@ class polychord(Sampler):
             self.dump_paramnames(self.raw_prefix)
             self.collection = self.save_sample(self.raw_prefix + ".txt", "1")
             # Load clusters, and save if output
-            if self.pc_settings.do_clustering:
+            if self.pc_kwargs["do_clustering"]:
                 self.clusters = {}
                 clusters_raw_regexp = re.compile(
-                    re.escape(self.pc_settings.file_root + "_") + r"\d+\.txt")
+                    re.escape(self.pc_kwargs["file_root"] + "_") + r"\d+\.txt")
                 cluster_raw_files = sorted(find_with_regexp(
                     clusters_raw_regexp, os.path.join(
-                        self.pc_settings.base_dir, self._clusters_dir), walk_tree=True))
+                        self.pc_kwargs["base_dir"], self._clusters_dir), walk_tree=True))
                 for f in cluster_raw_files:
                     i = int(f[f.rfind("_") + 1:-len(".txt")])
                     if self.output:
@@ -329,7 +326,7 @@ class polychord(Sampler):
                 component = line.split("=")[0].lstrip(pre + "_").rstrip(") ")
                 if not component:
                     self.logZ, self.logZstd = logZ, logZstd
-                elif self.pc_settings.do_clustering:
+                elif self.pc_kwargs["do_clustering"]:
                     i = int(component)
                     self.clusters[i]["logZ"], self.clusters[i]["logZstd"] = logZ, logZstd
             self.log.debug(
@@ -357,7 +354,7 @@ class polychord(Sampler):
         if is_main_process():
             self.log.info("Finished! Raw PolyChord output stored in '%s', "
                           "with prefix '%s'",
-                          self.pc_settings.base_dir, self.pc_settings.file_root)
+                          self.pc_kwargs["base_dir"], self.pc_kwargs["file_root"])
             self.log.info(
                 "log(Z) = %g +/- %g ; Z in [%.8g, %.8g] (68%% C.L. log-gaussian)",
                 self.logZ, self.logZstd,
@@ -374,7 +371,7 @@ class polychord(Sampler):
         if is_main_process():
             products = {
                 "sample": self.collection, "logZ": self.logZ, "logZstd": self.logZstd}
-            if self.pc_settings.do_clustering:
+            if self.pc_kwargs["do_clustering"]:
                 products.update({"clusters": self.clusters})
             return products
         else:
