@@ -148,7 +148,7 @@ class polychord(Sampler):
         settings: Any = load_module('pypolychord.settings', path=self._poly_build_path,
                                     min_version=None)
         self.pc_settings = settings.PolyChordSettings(
-            self.nDims, self.nDerived, seed=(self.seed if self.seed is not None else -1),
+            self.nDims, self.nDerived,
             **{p: getattr(self, p) for p in pc_args if getattr(self, p) is not None})
         # Prepare callback function
         if self.callback_function is not None:
