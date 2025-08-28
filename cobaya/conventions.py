@@ -6,15 +6,17 @@
 :Author: Jesus Torrado
 
 """
+
 from typing import Final
 
 # Package name (for importlib)
 # (apparently __package__ is only defined if you import something locally.
-cobaya_package = __name__.rpartition('.')[0]
+cobaya_package = __name__.rpartition(".")[0]
 
 
 def get_version():
     from cobaya import __version__
+
     return __version__
 
 
@@ -25,8 +27,13 @@ kinds: Final = ("sampler", "theory", "likelihood")
 
 # Reserved attributes for component classes with defaults.
 # These are ignored by HasDefaults.get_class_options()
-reserved_attributes: Final = {"input_params", "output_params", "install_options",
-                              "bibtex_file", "file_base_name"}
+reserved_attributes: Final = {
+    "input_params",
+    "output_params",
+    "install_options",
+    "bibtex_file",
+    "file_base_name",
+}
 
 # Conventional order for yaml dumping (purely cosmetic)
 dump_sort_cosmetic: Final = ["theory", "likelihood", "prior", "params", "sampler", "post"]
@@ -55,7 +62,7 @@ def get_chi2_name(p):
 
 
 def undo_chi2_name(p):
-    return p[len(OutPar.chi2 + derived_par_name_separator):]
+    return p[len(OutPar.chi2 + derived_par_name_separator) :]
 
 
 def get_chi2_label(p):
@@ -92,6 +99,7 @@ def minuslogpost_label():
 
 # Output files
 
+
 class FileSuffix:
     input = "input"
     updated = "updated"
@@ -113,7 +121,6 @@ packages_path_input: Final = "packages_path"
 packages_path_arg_posix: Final = packages_path_arg.replace("_", "-")
 packages_path_env: Final = "COBAYA_PACKAGES_PATH"
 packages_path_config_file = "config.yaml"
-packages_path_containers = "/cobaya_packages"
 
 install_skip_env: Final = "COBAYA_INSTALL_SKIP"
 test_skip_env: Final = "COBAYA_TEST_SKIP"
@@ -124,9 +131,11 @@ data_path = "data"
 code_path = "code"
 
 # Internal package structure
-subfolders: Final = {"likelihood": "likelihoods",
-                     "sampler": "samplers",
-                     "theory": "theories"}
+subfolders: Final = {
+    "likelihood": "likelihoods",
+    "sampler": "samplers",
+    "theory": "theories",
+}
 
 # Approximate overhead of cobaya per posterior evaluation. Useful for blocking speeds
 overhead_time = 0.0003
